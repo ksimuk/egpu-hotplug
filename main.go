@@ -24,7 +24,7 @@ func main() {
 			&cli.StringFlag{
 				Name:  "gpu",
 				Usage: "string to match GPU name",
-				Value: "580",
+				Value: "Ellesmere",
 			},
 		},
 		Commands: []*cli.Command{
