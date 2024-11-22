@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -22,9 +23,16 @@ func main() {
 		Name:                  "egpu-hotplug",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:  "gpu",
-				Usage: "string to match GPU name",
-				Value: "Ellesmere",
+				Name:    "gpu",
+				Usage:   "string to match GPU name",
+				Aliases: []string{"g"},
+				Value:   "Ellesmere",
+			},
+			&cli.BoolFlag{
+				Name:    "force",
+				Usage:   "force unbind",
+				Aliases: []string{"f"},
+				Value:   false,
 			},
 		},
 		Commands: []*cli.Command{
@@ -58,6 +66,11 @@ func unbind() *cli.Command {
 			if err != nil {
 				return err
 			}
+
+			if !cli.Bool("force") && !isFree(gpuAddr) {
+				return fmt.Errorf("GPU '%s' is not free", gpu)
+			}
+
 			audioAddr := strings.Replace(gpuAddr, "00.0", "00.1", 1)
 			err = writeSysFs(fmt.Sprintf("/sys/bus/pci/devices/%s/driver/unbind", gpuAddr), gpuAddr)
 			if err != nil {
@@ -71,6 +84,22 @@ func unbind() *cli.Command {
 			return nil
 		},
 	}
+}
+
+func isFree(addr string) bool {
+	// execute `fuser -v /dev/dri/by-path/pci-addr`
+	cmd := exec.Command("fuser", "-v", fmt.Sprintf("/dev/dri/by-path/pci-%s-render", addr))
+	out, err := cmd.Output()
+	if err != nil {
+		err, ok := err.(*exec.ExitError)
+		if ok && err.ExitCode() == 1 && len(err.Stderr) == 0 {
+			return true
+		} else {
+			fmt.Printf("GPU '%s' failed to check free %+v\n", addr, err)
+		}
+		return false
+	}
+	return len(out) == 0
 }
 
 func getDeviceAddress(name string) (string, error) {
