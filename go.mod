@@ -3,6 +3,7 @@ module github.com/ksimuk/egpu-hotplug
 go 1.23.3
 
 require (
+	github.com/godbus/dbus/v5 v5.1.0
 	github.com/jaypipes/ghw v0.13.0
 	github.com/urfave/cli/v3 v3.0.0-alpha9.3
 )
